@@ -1,19 +1,22 @@
 import importlib.metadata
 import os
+import tempfile
 from os import path
 from typing import Annotated, Optional, Union
 from urllib.parse import quote
 
 import click
 import uvicorn
+from celery.result import AsyncResult
 from fastapi import FastAPI, File, Query, UploadFile, applications
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from whisper import tokenizer
 
 from app.config import CONFIG
 from app.factory.asr_model_factory import ASRModelFactory
+from app.tasks import celery, transcribe_task
 from app.utils import load_audio
 
 asr_model = ASRModelFactory.create_asr_model()
@@ -53,7 +56,7 @@ async def index():
 
 
 @app.post("/asr", tags=["Endpoints"])
-async def asr(
+async def asr_task(
     audio_file: UploadFile = File(...),  # noqa: B008
     encode: bool = Query(default=True, description="Encode audio first through ffmpeg"),
     task: Union[str, None] = Query(default="transcribe", enum=["transcribe", "translate"]),
@@ -88,8 +91,12 @@ async def asr(
     ),
     output: Union[str, None] = Query(default="txt", enum=["txt", "vtt", "srt", "tsv", "json"]),
 ):
-    result = asr_model.transcribe(
-        load_audio(audio_file.file, encode),
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_audio_file:
+        tmp_audio_file.write(audio_file.file.read())
+        tmp_audio_file.flush()
+
+    task = transcribe_task.delay(
+        tmp_audio_file.name,
         task,
         language,
         initial_prompt,
@@ -98,14 +105,25 @@ async def asr(
         {"diarize": diarize, "min_speakers": min_speakers, "max_speakers": max_speakers},
         output,
     )
-    return StreamingResponse(
-        result,
-        media_type="text/plain",
-        headers={
-            "Asr-Engine": CONFIG.ASR_ENGINE,
-            "Content-Disposition": f'attachment; filename="{quote(audio_file.filename)}.{output}"',
-        },
-    )
+    return {"task_id": str(task)}
+
+
+@app.get("/asr/result/{task_id}", tags=["Endpoints"])
+async def get_task_result(task_id: str):
+    """
+    Get the result of a transcription task.
+    """
+    task = AsyncResult(task_id, app=celery)
+    if not task.ready():
+        return JSONResponse(status_code=202, content={'task_id': str(task_id), 'status': 'Processing'})
+
+    result = task.get()
+    return {
+        "task_id": task_id,
+        "status": "SUCCESS",
+        "result": result
+    }
+
 
 
 @app.post("/detect-language", tags=["Endpoints"])

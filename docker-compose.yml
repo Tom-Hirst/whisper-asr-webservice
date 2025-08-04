@@ -1,17 +1,41 @@
 version: "3.4"
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   whisper-asr-webservice:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       - ASR_MODEL=base
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
       - "9000:9000"
     volumes:
       - ./app:/app/app
       - cache-whisper:/root/.cache
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A worker.celery worker --loglevel=info
+    environment:
+      - ASR_MODEL=base
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - cache-whisper:/root/.cache
+    depends_on:
+      - redis
 
 volumes:
   cache-whisper:

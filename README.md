@@ -1,5 +1,5 @@
 ![Release](https://img.shields.io/github/v/release/ahmetoner/whisper-asr-webservice.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/onerahmet/openai-whisper-asr-webservice.svg)
+![Docker Pulls](https://img.shields.io/docker/pulls/Tom-Hirst/openai-whisper-asr-webservice.svg)
 ![Build](https://img.shields.io/github/actions/workflow/status/ahmetoner/whisper-asr-webservice/docker-publish.yml.svg)
 ![Licence](https://img.shields.io/github/license/ahmetoner/whisper-asr-webservice.svg)
 
@@ -25,7 +25,7 @@ Current release (v1.9.1) supports following whisper models:
 docker run -d -p 9000:9000 \
   -e ASR_MODEL=base \
   -e ASR_ENGINE=openai_whisper \
-  onerahmet/openai-whisper-asr-webservice:latest
+  Tom-Hirst/openai-whisper-asr-webservice:latest
 ```
 
 ### GPU
@@ -34,7 +34,7 @@ docker run -d -p 9000:9000 \
 docker run -d --gpus all -p 9000:9000 \
   -e ASR_MODEL=base \
   -e ASR_ENGINE=openai_whisper \
-  onerahmet/openai-whisper-asr-webservice:latest-gpu
+  Tom-Hirst/openai-whisper-asr-webservice:latest-gpu
 ```
 
 #### Cache
@@ -44,13 +44,14 @@ To reduce container startup time by avoiding repeated downloads, you can persist
 ```shell
 docker run -d -p 9000:9000 \
   -v $PWD/cache:/root/.cache/ \
-  onerahmet/openai-whisper-asr-webservice:latest
+  Tom-Hirst/openai-whisper-asr-webservice:latest
 ```
 
 ## Key Features
 
 - Multiple ASR engines support (OpenAI Whisper, Faster Whisper, WhisperX)
 - Multiple output formats (text, JSON, VTT, SRT, TSV)
+- Asynchronous processing with task queue
 - Word-level timestamps support
 - Voice activity detection (VAD) filtering
 - Speaker diarization (with WhisperX)

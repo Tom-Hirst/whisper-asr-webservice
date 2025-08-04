@@ -2,10 +2,12 @@
 
 After running the docker image interactive Swagger API documentation is available at [localhost:9000/docs](http://localhost:9000/docs)
 
-There are 2 endpoints available:
+There are 4 endpoints available:
 
 - [/asr](##Automatic-Speech-recognition-service-/asr) (Automatic Speech Recognition)
 - [/detect-language](##Language-detection-service-/detect-language)
+- [/asr/task](##Asynchronous-Speech-recognition-service-/asr/task)
+- [/asr/result/{task_id}](##Task-result-service-/asr/result/{task_id})
 
 ## Automatic speech recognition service /asr
 
@@ -78,6 +80,57 @@ When using the WhisperX engine with diarization enabled (`diarize=true`), the ou
 3. Sufficient memory for diarization models
 
 You can optionally specify `min_speakers` and `max_speakers` if you know the expected number of speakers.
+
+## Asynchronous Speech recognition service /asr/task
+
+This endpoint allows you to submit a transcription task and receive a task ID. You can then use the task ID to check the status of the task and retrieve the result.
+
+### Request URL Query Params
+
+| Name            | Values                                         | Description                                                    |
+|-----------------|------------------------------------------------|----------------------------------------------------------------|
+| audio_file      | File                                           | Audio or video file to transcribe                              |
+| output          | `text` (default), `json`, `vtt`, `srt`, `tsv` | Output format                                                  |
+| task            | `transcribe`, `translate`                      | Task type - transcribe in source language or translate to English |
+| language        | `en` (default is auto recognition)             | Source language code (see supported languages)                 |
+| word_timestamps | false (default)                                | Enable word-level timestamps (Faster Whisper only)             |
+| vad_filter      | false (default)                                | Enable voice activity detection filtering (Faster Whisper only) |
+| encode          | true (default)                                 | Encode audio through FFmpeg before processing                  |
+| diarize         | false (default)                                | Enable speaker diarization (WhisperX only)                     |
+| min_speakers    | null (default)                                 | Minimum number of speakers for diarization (WhisperX only)     |
+| max_speakers    | null (default)                                 | Maximum number of speakers for diarization (WhisperX only)     |
+
+Example request with cURL
+
+```bash
+curl -X POST -H "content-type: multipart/form-data" -F "audio_file=@/path/to/file" 0.0.0.0:9000/asr/task?output=json
+```
+
+### Response (JSON)
+
+- **task_id**: The ID of the submitted task.
+
+## Task result service /asr/result/{task_id}
+
+This endpoint allows you to retrieve the result of a transcription task.
+
+### Request URL Path Params
+
+| Name      | Description         |
+|-----------|---------------------|
+| task_id   | The ID of the task. |
+
+Example request with cURL
+
+```bash
+curl -X GET 0.0.0.0:9000/asr/result/your-task-id
+```
+
+### Response (JSON)
+
+- **task_id**: The ID of the task.
+- **status**: The status of the task. Can be `Processing` or `SUCCESS`.
+- **result**: The transcription result. This field is only present if the task is successful.
 
 ## Language detection service /detect-language
 

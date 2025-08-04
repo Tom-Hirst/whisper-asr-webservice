@@ -22,7 +22,7 @@ nav:
   - Changelog: changelog.md
   - License: licence.md
   - Releases: https://github.com/ahmetoner/whisper-asr-webservice/releases
-  - Docker Hub: https://hub.docker.com/r/onerahmet/openai-whisper-asr-webservice
+  - Docker Hub: https://hub.docker.com/r/Tom-Hirst/openai-whisper-asr-webservice
 
 theme:
   name: material
